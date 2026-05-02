@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Mood — Climate Oracle</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sand:    #c8a96e;
+  --sand2:   #e8d4a8;
+  --sand3:   #f5ead0;
+  --crimson: #8b1a1a;
+  --rust:    #b84a2a;
+  --gold:    #c8922a;
+  --gold2:   #e8b84a;
+  --black:   #1a1008;
+  --dark:    #2c1a0e;
+  --ink:     #3d2510;
+  --parch:   #f2e6c8;
+  --parch2:  #e8d8b0;
+  --teal:    #2a6b5c;
+  --teal2:   #3a8a72;
+  --text:    #2c1a0e;
+  --muted:   #8a6a4a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body {
+  background: var(--parch);
+  color: var(--text);
+  font-family: 'Crimson Pro', Georgia, serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Subtle noise texture overlay */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+
+/* Faint grid */
+body::after {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(139,26,26,0.06) 39px,rgba(139,26,26,0.06) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(139,26,26,0.06) 39px,rgba(139,26,26,0.06) 40px);
+}
+
+.container {
+  position:relative; z-index:1;
+  max-width:980px; margin:0 auto;
+  padding:2rem 1.5rem 3rem;
+}
+
+/* ── TRIBAL STRIPE ── */
+.tribal-stripe {
+  height:7px;
+  background: repeating-linear-gradient(90deg,
+    var(--crimson) 0,   var(--crimson) 10px,
+    var(--black)   10px,var(--black)   14px,
+    var(--gold2)   14px,var(--gold2)   24px,
+    var(--teal)    24px,var(--teal)    28px,
+    var(--black)   28px,var(--black)   32px,
+    var(--sand)    32px,var(--sand)    42px,
+    var(--black)   42px,var(--black)   46px,
+    var(--crimson) 46px,var(--crimson) 56px
+  );
+  border-radius:2px;
+  margin-bottom:1.5rem;
+}
+.tribal-stripe.thin {
+  height:4px; margin:1.2rem 0;
+}
+
+/* ── CONFIG ── */
+.config-banner {
+  background: linear-gradient(135deg,rgba(139,26,26,0.06),rgba(200,146,42,0.1));
+  border: 1.5px solid rgba(139,26,26,0.3);
+  border-radius:3px; padding:1.3rem 1.5rem; margin-bottom:2rem;
+  position:relative; overflow:hidden;
+}
+.config-banner::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: linear-gradient(90deg,var(--crimson),var(--gold),var(--teal),var(--gold),var(--crimson));
+}
+.config-banner h3 {
+  font-family:'Cinzel',serif; font-size:0.75rem; letter-spacing:0.2em;
+  text-transform:uppercase; color:var(--crimson); margin-bottom:0.35rem;
+}
+.config-banner p { font-size:0.88rem; color:var(--muted); font-style:italic; }
+.config-fields { display:flex; gap:0.8rem; flex-wrap:wrap; margin-top:0.9rem; width:100%; }
+.config-field { display:flex; flex-direction:column; gap:0.3rem; flex:1; min-width:150px; }
+.config-field label {
+  font-family:'Cinzel',serif; font-size:0.6rem;
+  letter-spacing:0.15em; text-transform:uppercase; color:var(--muted);
+}
+.config-field input {
+  background:rgba(255,255,255,0.65);
+  border:1px solid rgba(139,26,26,0.28); border-radius:3px;
+  padding:0.5rem 0.8rem; font-family:'Crimson Pro',serif;
+  font-size:0.9rem; color:var(--text); outline:none; transition:border-color 0.2s;
+}
+.config-field input:focus { border-color:var(--crimson); }
+.btn-connect {
+  font-family:'Cinzel',serif; font-size:0.62rem; letter-spacing:0.15em; text-transform:uppercase;
+  background:var(--crimson); border:none; color:var(--sand3);
+  padding:0.6rem 1.5rem; border-radius:3px; cursor:pointer; align-self:flex-end;
+  transition:background 0.2s, transform 0.2s;
+}
+.btn-connect:hover { background:var(--rust); transform:translateY(-1px); }
+
+/* ── HEADER ── */
+header { text-align:center; margin-bottom:2.5rem; position:relative; }
+
+.logo-wrap {
+  display:flex; align-items:center; justify-content:center;
+  gap:1.5rem; margin-bottom:0.8rem;
+}
+
+.medallion {
+  width:76px; height:76px; border-radius:50%; overflow:hidden;
+  border:3px solid var(--gold);
+  box-shadow: 0 0 0 5px var(--crimson), 0 0 0 8px var(--gold2), 0 8px 28px rgba(139,26,26,0.4);
+  flex-shrink:0;
+  animation: medalGlow 4s ease-in-out infinite;
+  position:relative;
+}
+.medallion::after {
+  content:'';
+  position:absolute; inset:-12px; border-radius:50%;
+  border:1px dashed rgba(200,146,42,0.45);
+  animation:spinSlow 10s linear infinite;
+  pointer-events:none;
+}
+@keyframes medalGlow {
+  0%,100%{box-shadow:0 0 0 5px var(--crimson),0 0 0 8px var(--gold2),0 8px 28px rgba(139,26,26,0.4);}
+  50%    {box-shadow:0 0 0 5px var(--rust),   0 0 0 8px var(--gold), 0 8px 36px rgba(200,146,42,0.5);}
+}
+@keyframes spinSlow { to{transform:rotate(360deg);} }
+
+.medallion img {
+  width:100%; height:100%; object-fit:cover; object-position:center top;
+}
+
+.title-block { text-align:left; }
+.title-block h1 {
+  font-family:'Cinzel',serif;
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:900; letter-spacing:0.06em; line-height:1;
+  color:var(--crimson);
+  text-shadow: 2px 2px 0 rgba(200,146,42,0.25);
+}
+.title-block h1 em { font-style:normal; color:var(--gold); }
+.title-block p {
+  font-family:'Cinzel',serif; font-size:0.7rem;
+  letter-spacing:0.22em; text-transform:uppercase; color:var(--muted); margin-top:0.35rem;
+}
+
+.status-row {
+  display:flex; align-items:center; justify-content:center;
+  gap:0.8rem; margin-top:0.8rem; flex-wrap:wrap;
+}
+.status-badge {
+  display:flex; align-items:center; gap:0.5rem;
+  font-family:'Cinzel',serif; font-size:0.6rem;
+  letter-spacing:0.14em; text-transform:uppercase; color:var(--muted);
+  background:rgba(255,255,255,0.55); border:1px solid rgba(139,26,26,0.22);
+  border-radius:3px; padding:0.38rem 0.9rem;
+}
+.dot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--teal2); box-shadow:0 0 6px var(--teal2);
+  animation:pulse 2s ease-in-out infinite;
+}
+.dot.offline{background:var(--muted);box-shadow:none;animation:none;}
+.dot.error  {background:var(--crimson);box-shadow:0 0 6px var(--crimson);}
+.dot.loading{background:var(--gold);box-shadow:0 0 6px var(--gold);}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+
+.controls{display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;}
+.btn {
+  font-family:'Cinzel',serif; font-size:0.58rem; letter-spacing:0.12em; text-transform:uppercase;
+  border:1px solid rgba(139,26,26,0.28); background:rgba(255,255,255,0.45);
+  color:var(--muted); padding:0.38rem 0.9rem; border-radius:3px; cursor:pointer; transition:all 0.2s;
+}
+.btn:hover,.btn.active{border-color:var(--crimson);color:var(--crimson);background:rgba(139,26,26,0.07);}
+
+/* ── SVG ORNAMENT ── */
+.ornament { text-align:center; margin:0.8rem 0; }
+.ornament svg { width:280px; height:22px; overflow:visible; }
+
+/* ── MOOD HERO ── */
+.mood-hero {
+  background:linear-gradient(140deg,rgba(255,255,255,0.75),rgba(232,212,168,0.45));
+  border:1.5px solid rgba(139,26,26,0.2); border-radius:3px;
+  overflow:hidden; margin-bottom:1.5rem;
+}
+.mood-inner {
+  display:flex; align-items:center; gap:2rem; flex-wrap:wrap;
+  padding:2rem; position:relative;
+}
+.mood-inner::after {
+  content:'✦';
+  position:absolute; top:1rem; right:1.5rem;
+  font-size:1.4rem; color:rgba(200,146,42,0.25);
+  animation:spinSlow 14s linear infinite;
+}
+
+.mood-emoji-wrap {
+  width:100px; height:100px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:3rem;
+  border:2.5px solid var(--gold);
+  background:radial-gradient(circle,rgba(248,234,200,0.95),rgba(232,212,168,0.6));
+  box-shadow:0 4px 20px rgba(139,26,26,0.18), inset 0 0 16px rgba(200,146,42,0.12);
+  flex-shrink:0;
+  animation:emojiBob 4s ease-in-out infinite;
+  position:relative;
+}
+.mood-emoji-wrap::after {
+  content:''; position:absolute; inset:-8px; border-radius:50%;
+  border:1px dashed rgba(200,146,42,0.38);
+  animation:spinSlow 9s linear infinite reverse;
+}
+@keyframes emojiBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+.mood-text .label {
+  font-family:'Cinzel',serif; font-size:0.58rem;
+  letter-spacing:0.22em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem;
+}
+.mood-name {
+  font-family:'Cinzel',serif; font-size:clamp(1.8rem,4vw,2.8rem);
+  font-weight:900; line-height:1; transition:color 0.6s; color:var(--crimson);
+}
+.mood-desc {
+  font-size:0.95rem; color:var(--muted); margin-top:0.5rem;
+  max-width:340px; line-height:1.65; font-style:italic;
+}
+.tooltip-badge {
+  font-family:'Cinzel',serif; font-size:0.56rem; letter-spacing:0.15em;
+  text-transform:uppercase; padding:0.18rem 0.65rem; border-radius:2px;
+  margin-top:0.6rem; display:inline-block; border:1px solid currentColor;
+}
+
+.mood-score-ring {
+  margin-left:auto; position:relative; width:88px; height:88px; flex-shrink:0;
+}
+.mood-score-ring svg{transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:rgba(139,26,26,0.1);stroke-width:5;}
+.ring-fg{fill:none;stroke-width:5;stroke-linecap:round;stroke-dasharray:226;stroke-dashoffset:113;transition:stroke-dashoffset 1s ease,stroke 0.6s;stroke:var(--crimson);}
+.ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:700;}
+.score-val{font-size:1.35rem;line-height:1;color:var(--crimson);}
+.score-unit{font-size:0.48rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+
+/* ── SENSOR CARDS ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.2rem;margin-bottom:1.5rem;}
+
+.card {
+  background:linear-gradient(145deg,rgba(255,255,255,0.82),rgba(232,212,168,0.38));
+  border:1.5px solid rgba(139,26,26,0.18); border-radius:3px;
+  overflow:hidden; transition:transform 0.3s,box-shadow 0.3s;
+}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(139,26,26,0.14);}
+
+.card-body{padding:1.5rem 1.6rem;}
+.card-icon{font-size:1.6rem;margin-bottom:0.8rem;display:block;}
+.card-label{font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;}
+.card-value{font-family:'Cinzel',serif;font-size:clamp(2.4rem,6vw,3.6rem);font-weight:900;line-height:1;}
+.card.temp .card-value{color:var(--crimson);}
+.card.humi .card-value{color:var(--teal);}
+.card-unit{font-size:1.1rem;opacity:0.45;}
+
+.gauge-wrap{margin-top:1.1rem;}
+.gauge-track{height:5px;background:rgba(139,26,26,0.1);border-radius:0;overflow:hidden;}
+.gauge-fill{height:100%;transition:width 1s cubic-bezier(0.34,1.56,0.64,1);}
+.card.temp .gauge-fill{background:linear-gradient(90deg,var(--crimson),var(--gold2));}
+.card.humi .gauge-fill{background:linear-gradient(90deg,var(--teal),var(--teal2));}
+.gauge-meta{display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted);margin-top:0.4rem;}
+
+/* ── HISTORY ── */
+.history-panel{
+  background:linear-gradient(135deg,rgba(255,255,255,0.78),rgba(232,212,168,0.4));
+  border:1.5px solid rgba(139,26,26,0.18); border-radius:3px; overflow:hidden; margin-bottom:1.5rem;
+}
+.hist-body{padding:1.6rem;}
+.panel-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem;flex-wrap:wrap;gap:0.5rem;}
+.panel-title{font-family:'Cinzel',serif;font-weight:700;font-size:0.92rem;letter-spacing:0.06em;color:var(--crimson);}
+.panel-sub{font-size:0.72rem;color:var(--muted);font-style:italic;}
+.legend{display:flex;gap:1rem;align-items:center;}
+.legend-item{display:flex;align-items:center;gap:0.4rem;font-family:'Cinzel',serif;font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);}
+.legend-dot{width:8px;height:8px;border-radius:50%;}
+canvas#sparkline{width:100%;max-height:130px;display:block;}
+
+/* ── BOTTOM ROW ── */
+.bottom-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.2rem;}
+
+.info-card{
+  background:linear-gradient(145deg,rgba(255,255,255,0.82),rgba(232,212,168,0.38));
+  border:1.5px solid rgba(139,26,26,0.18); border-radius:3px; overflow:hidden;
+}
+.info-body{padding:1.4rem;}
+.info-card h3{
+  font-family:'Cinzel',serif; font-size:0.72rem; font-weight:700;
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--crimson);
+  margin-bottom:0.9rem; display:flex; align-items:center; gap:0.4rem;
+}
+.info-row{
+  display:flex; justify-content:space-between;
+  font-size:0.8rem; padding:0.38rem 0;
+  border-bottom:1px dashed rgba(139,26,26,0.12); color:var(--muted);
+}
+.info-row:last-child{border-bottom:none;}
+.info-row span:last-child{color:var(--ink);font-style:italic;}
+
+.code-block{
+  background:var(--dark); border-radius:3px; padding:0.9rem;
+  font-size:0.58rem; line-height:1.85; color:var(--sand2); overflow:auto;
+  font-family:'Courier New',monospace;
+}
+
+/* ── TICKER ── */
+.ticker{
+  display:flex; align-items:center; gap:0.5rem;
+  font-size:0.72rem; font-style:italic; color:var(--muted);
+  margin-top:1.8rem; padding-top:1.3rem;
+  border-top:1px dashed rgba(139,26,26,0.18); justify-content:center;
+}
+.ticker-line{width:50px;height:3px;background:rgba(139,26,26,0.1);border-radius:2px;overflow:hidden;}
+.ticker-fill{height:100%;background:var(--crimson);border-radius:2px;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed; bottom:1.5rem; left:50%;
+  transform:translateX(-50%) translateY(100px);
+  background:var(--dark); border:1px solid var(--gold);
+  border-radius:3px; padding:0.7rem 1.4rem;
+  font-family:'Cinzel',serif; font-size:0.65rem; letter-spacing:0.1em;
+  color:var(--sand2); z-index:100;
+  transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  max-width:320px; text-align:center;
+}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+@media(max-width:520px){
+  .mood-score-ring{display:none;}
+  .logo-wrap{flex-direction:column;gap:1rem;text-align:center;}
+  .title-block{text-align:center;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<div class="container">
+
+  <!-- CONFIG -->
+  <div class="config-banner" id="configBanner">
+    <h3>⚙ ThingSpeak Connection</h3>
+    <p>Enter your Channel ID and Read API Key to receive live ESP32 sensor data.</p>
+    <div class="config-fields">
+      <div class="config-field">
+        <label>Channel ID</label>
+        <input type="text" id="inputChannel" placeholder="e.g. 2345678">
+      </div>
+      <div class="config-field">
+        <label>Read API Key</label>
+        <input type="text" id="inputKey" placeholder="e.g. ABCDEF1234567890">
+      </div>
+      <button class="btn-connect" onclick="connectThingSpeak()">▶ Connect</button>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="tribal-stripe"></div>
+    <div class="logo-wrap">
+      <div class="medallion">
+        <img src="IMG_1690.png" alt="Rashaida — Eritrea">
+      </div>
+      <div class="title-block">
+        <h1>Smart<em>Mood</em></h1>
+        <p>ESP32 · DHT11 · Climate Oracle</p>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="status-badge">
+        <div class="dot offline" id="connDot"></div>
+        <span id="connLabel">NOT CONNECTED</span>
+      </div>
+      <div class="controls">
+        <button class="btn" id="btnSim" onclick="toggleSimulate()">○ Demo Mode</button>
+        <button class="btn" onclick="resetHistory()">↺ Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Ornament divider -->
+  <div class="ornament">
+    <svg viewBox="0 0 280 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="11" x2="100" y2="11" stroke="#8b1a1a" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <polygon points="118,3 128,11 118,19 108,11" fill="none" stroke="#c8922a" stroke-width="1.3"/>
+      <rect x="124" y="7" width="8" height="8" fill="none" stroke="#8b1a1a" stroke-width="1"/>
+      <circle cx="140" cy="11" r="3.5" fill="#c8922a"/>
+      <rect x="148" y="7" width="8" height="8" fill="none" stroke="#8b1a1a" stroke-width="1"/>
+      <polygon points="162,3 172,11 162,19 152,11" fill="none" stroke="#c8922a" stroke-width="1.3"/>
+      <line x1="180" y1="11" x2="280" y2="11" stroke="#8b1a1a" stroke-width="0.8" stroke-dasharray="4 3"/>
+    </svg>
+  </div>
+
+  <!-- MOOD HERO -->
+  <div class="mood-hero">
+    <div class="tribal-stripe" style="height:5px;margin:0;border-radius:0;"></div>
+    <div class="mood-inner">
+      <div class="mood-emoji-wrap" id="moodEmoji">🔌</div>
+      <div class="mood-text">
+        <div class="label">Ambient Mood Reading</div>
+        <div class="mood-name" id="moodName" style="color:var(--muted)">Awaiting Signal</div>
+        <div class="mood-desc" id="moodDesc">Enter ThingSpeak credentials above or enable Demo Mode to see live climate readings from your ESP32 + DHT11.</div>
+        <span class="tooltip-badge" id="moodBadge" style="color:var(--muted);border-color:var(--muted)"># NO DATA</span>
+      </div>
+      <div class="mood-score-ring">
+        <svg width="88" height="88" viewBox="0 0 88 88">
+          <circle class="ring-bg" cx="44" cy="44" r="35"/>
+          <circle class="ring-fg" id="ringFg" cx="44" cy="44" r="35"/>
+        </svg>
+        <div class="ring-label">
+          <span class="score-val" id="scoreVal">--</span>
+          <span class="score-unit">Comfort</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tribal-stripe thin"></div>
+
+  <!-- SENSOR CARDS -->
+  <div class="cards-grid">
+    <div class="card temp">
+      <div class="tribal-stripe" style="height:4px;margin:0;border-radius:0;"></div>
+      <div class="card-body">
+        <span class="card-icon">🌡️</span>
+        <div class="card-label">Temperature Reading</div>
+        <div class="card-value" id="tempVal">--<span class="card-unit">°C</span></div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="tempGauge" style="width:0%"></div></div>
+          <div class="gauge-meta"><span>0°C</span><span id="tempPct">--%</span><span>50°C</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card humi">
+      <div class="tribal-stripe" style="height:4px;margin:0;border-radius:0;filter:hue-rotate(160deg);"></div>
+      <div class="card-body">
+        <span class="card-icon">💧</span>
+        <div class="card-label">Humidity Reading</div>
+        <div class="card-value" id="humiVal">--<span class="card-unit">%</span></div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="humiGauge" style="width:0%"></div></div>
+          <div class="gauge-meta"><span>0%</span><span id="humiPct">--%</span><span>100%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-panel">
+    <div class="tribal-stripe" style="height:4px;margin:0;border-radius:0;"></div>
+    <div class="hist-body">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Sensor Chronicle</div>
+          <div class="panel-sub" id="historyCount">Awaiting readings…</div>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--crimson)"></div>Temp °C</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>Humidity %</div>
+        </div>
+      </div>
+      <canvas id="sparkline" height="130"></canvas>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="bottom-row">
+    <div class="info-card">
+      <div class="tribal-stripe" style="height:3px;margin:0;border-radius:0;"></div>
+      <div class="info-body">
+        <h3>⚙ Device Info</h3>
+        <div class="info-row"><span>Board</span><span>ESP32 DevKit v1</span></div>
+        <div class="info-row"><span>Sensor</span><span>DHT11</span></div>
+        <div class="info-row"><span>Pin</span><span>GPIO 4</span></div>
+        <div class="info-row"><span>Cloud</span><span>ThingSpeak</span></div>
+        <div class="info-row"><span>Interval</span><span>15 sec</span></div>
+        <div class="info-row"><span>Channel</span><span id="channelDisplay">—</span></div>
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="tribal-stripe" style="height:3px;margin:0;border-radius:0;filter:hue-rotate(80deg);"></div>
+      <div class="info-body">
+        <h3>🎭 Mood Scale</h3>
+        <div class="info-row"><span>🥵 Hot & Humid</span><span>T&gt;32 H&gt;70%</span></div>
+        <div class="info-row"><span>☀️ Warm</span><span>T 28–32°C</span></div>
+        <div class="info-row"><span>😊 Pleasant</span><span>T 20–28°C</span></div>
+        <div class="info-row"><span>❄️ Cool & Dry</span><span>T 15–20°C</span></div>
+        <div class="info-row"><span>🥶 Cold</span><span>T &lt; 15°C</span></div>
+        <div class="info-row"><span>🌫️ Foggy</span><span>H &gt; 85%</span></div>
+      </div>
+    </div>
+    <div class="info-card">
+      <div class="tribal-stripe" style="height:3px;margin:0;border-radius:0;filter:hue-rotate(160deg);"></div>
+      <div class="info-body">
+        <h3>📡 Arduino Code</h3>
+        <div class="code-block">
+          <span style="color:#c8922a">#include</span> &lt;WiFi.h&gt;<br>
+          <span style="color:#c8922a">#include</span> &lt;HTTPClient.h&gt;<br>
+          <span style="color:#c8922a">#include</span> &lt;DHT.h&gt;<br><br>
+          <span style="color:#3a8a72">DHT</span> dht(<span style="color:#e8b84a">4</span>, DHT11);<br>
+          String key=<span style="color:#e8d4a8">"YOUR_KEY"</span>;<br><br>
+          <span style="color:#8a6a4a">// In loop():</span><br>
+          float t=dht.readTemperature();<br>
+          float h=dht.readHumidity();<br>
+          String url=<span style="color:#e8d4a8">"http://api"</span><br>
+          &nbsp;<span style="color:#e8d4a8">".thingspeak.com"</span><br>
+          &nbsp;<span style="color:#e8d4a8">"/update?api_key="</span><br>
+          &nbsp;+key+<span style="color:#e8d4a8">"&field1="</span>+t<br>
+          &nbsp;+<span style="color:#e8d4a8">"&field2="</span>+h;<br>
+          http.begin(url);<br>
+          http.GET();<br>
+          delay(<span style="color:#e8b84a">15000</span>);
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <span>Next reading in</span>
+    <div class="ticker-line"><div class="ticker-fill" id="tickerFill" style="width:0%"></div></div>
+    <span id="tickerText">--</span>
+    &nbsp;·&nbsp;
+    <span id="lastUpdate">No readings yet</span>
+  </div>
+
+  <!-- Bottom ornament -->
+  <div class="ornament" style="margin-top:1.5rem;">
+    <svg viewBox="0 0 280 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <line x1="0" y1="11" x2="100" y2="11" stroke="#8b1a1a" stroke-width="0.8" stroke-dasharray="4 3"/>
+      <polygon points="118,3 128,11 118,19 108,11" fill="none" stroke="#c8922a" stroke-width="1.3"/>
+      <rect x="124" y="7" width="8" height="8" fill="none" stroke="#8b1a1a" stroke-width="1"/>
+      <circle cx="140" cy="11" r="3.5" fill="#c8922a"/>
+      <rect x="148" y="7" width="8" height="8" fill="none" stroke="#8b1a1a" stroke-width="1"/>
+      <polygon points="162,3 172,11 162,19 152,11" fill="none" stroke="#c8922a" stroke-width="1.3"/>
+      <line x1="180" y1="11" x2="280" y2="11" stroke="#8b1a1a" stroke-width="0.8" stroke-dasharray="4 3"/>
+    </svg>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════
+//  CONFIG
+// ══════════════════════════════
+let CHANNEL_ID='', READ_KEY='';
+const INTERVAL=15;
+const hist={temp:[],humi:[]};
+let simulating=false, connected=false, countdown=INTERVAL;
+let fetchTimer=null, tickTimer=null, simInterval=null, simTick=null;
+let bT=24, bH=58;
+
+// ══════════════════════════════
+//  MOOD ENGINE
+// ══════════════════════════════
+const moods=[
+  {name:"Freezing",   emoji:"🥶",desc:"Dangerously cold. Consider heating your space immediately.",        badge:"# DANGER COLD",color:"#1a5c7a",score:15,c:(t,h)=>t<10},
+  {name:"Cold",       emoji:"❄️", desc:"Quite chilly. A warm sweater and hot beverage are recommended.",   badge:"# COLD ZONE",  color:"#2a6b5c",score:35,c:(t,h)=>t<18},
+  {name:"Cool & Dry", emoji:"🌬️",desc:"Fresh and crisp air. Excellent for focus and light activity.",     badge:"# COOL",       color:"#3a8a72",score:55,c:(t,h)=>t<22&&h<50},
+  {name:"Pleasant",   emoji:"😊",desc:"Temperature and humidity are balanced. A truly ideal environment.", badge:"# IDEAL",      color:"#2a6b5c",score:90,c:(t,h)=>t>=22&&t<=27&&h>=40&&h<=65},
+  {name:"Warm",       emoji:"☀️",desc:"Pleasantly warm. Stay hydrated and enjoy the comfortable warmth.",  badge:"# WARM",       color:"#b87820",score:70,c:(t,h)=>t>27&&t<=31&&h<70},
+  {name:"Hot & Humid",emoji:"🥵",desc:"High heat and humidity. Open windows or use air conditioning.",    badge:"# ALERT HOT",  color:"#8b1a1a",score:20,c:(t,h)=>t>31||h>80},
+  {name:"Foggy",      emoji:"🌫️",desc:"Excessive moisture in the air. Dehumidifier is recommended.",     badge:"# HIGH HUMID", color:"#6b5a3a",score:30,c:(t,h)=>h>85},
+];
+function getMood(t,h){for(const m of moods)if(m.c(t,h))return m;return moods[3];}
+
+// ══════════════════════════════
+//  UPDATE UI
+// ══════════════════════════════
+function updateUI(temp,humi){
+  document.getElementById('tempVal').innerHTML=`${temp.toFixed(1)}<span class="card-unit">°C</span>`;
+  document.getElementById('humiVal').innerHTML=`${humi.toFixed(0)}<span class="card-unit">%</span>`;
+  const tP=Math.min(100,Math.max(0,(temp/50)*100)), hP=Math.min(100,humi);
+  document.getElementById('tempGauge').style.width=tP+'%';
+  document.getElementById('humiGauge').style.width=hP+'%';
+  document.getElementById('tempPct').textContent=tP.toFixed(0)+'%';
+  document.getElementById('humiPct').textContent=hP.toFixed(0)+'%';
+  const mood=getMood(temp,humi);
+  document.getElementById('moodEmoji').textContent=mood.emoji;
+  document.getElementById('moodName').style.color=mood.color;
+  document.getElementById('moodName').textContent=mood.name;
+  document.getElementById('moodDesc').textContent=mood.desc;
+  const b=document.getElementById('moodBadge');
+  b.textContent=mood.badge; b.style.color=mood.color; b.style.borderColor=mood.color;
+  const off=220-(mood.score/100)*220;
+  document.getElementById('ringFg').style.strokeDashoffset=off;
+  document.getElementById('ringFg').style.stroke=mood.color;
+  document.getElementById('scoreVal').textContent=mood.score;
+  hist.temp.push(parseFloat(temp.toFixed(1)));
+  hist.humi.push(parseFloat(humi.toFixed(0)));
+  if(hist.temp.length>20){hist.temp.shift();hist.humi.shift();}
+  document.getElementById('historyCount').textContent=`Last ${hist.temp.length} readings`;
+  drawSparkline();
+  document.getElementById('lastUpdate').textContent='Updated '+new Date().toLocaleTimeString();
+}
+
+// ══════════════════════════════
+//  THINGSPEAK
+// ══════════════════════════════
+async function fetchTS(){
+  if(!CHANNEL_ID||!READ_KEY)return;
+  setStatus('loading','FETCHING…');
+  try{
+    const res=await fetch(`https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json?api_key=${READ_KEY}`);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    const t=parseFloat(j.field1),h=parseFloat(j.field2);
+    if(isNaN(t)||isNaN(h))throw new Error('No data');
+    updateUI(t,h); setStatus('online','LIVE DATA'); connected=true;
+  }catch(e){setStatus('error','ERROR — RETRYING');}
+}
+
+function connectThingSpeak(){
+  CHANNEL_ID=document.getElementById('inputChannel').value.trim();
+  READ_KEY=document.getElementById('inputKey').value.trim();
+  if(!CHANNEL_ID||!READ_KEY){showToast('Enter both Channel ID and API Key');return;}
+  localStorage.setItem('ts_channel',CHANNEL_ID);
+  localStorage.setItem('ts_key',READ_KEY);
+  document.getElementById('channelDisplay').textContent='#'+CHANNEL_ID;
+  if(simulating)stopSim();
+  startFetchLoop();
+  showToast('Connecting to ThingSpeak…');
+  document.getElementById('configBanner').style.opacity='0.5';
+}
+
+function startFetchLoop(){
+  clearInterval(fetchTimer); clearInterval(tickTimer);
+  countdown=INTERVAL; fetchTS();
+  fetchTimer=setInterval(()=>{fetchTS();countdown=INTERVAL;},INTERVAL*1000);
+  tickTimer=setInterval(()=>{
+    countdown=Math.max(0,countdown-1);
+    document.getElementById('tickerFill').style.width=((INTERVAL-countdown)/INTERVAL*100)+'%';
+    document.getElementById('tickerText').textContent=countdown+'s';
+  },1000);
+}
+
+// ══════════════════════════════
+//  SIMULATION
+// ══════════════════════════════
+function toggleSimulate(){
+  if(simulating){stopSim();return;}
+  clearInterval(fetchTimer); clearInterval(tickTimer); connected=false;
+  startSim();
+}
+function startSim(){
+  simulating=true;
+  document.getElementById('btnSim').classList.add('active');
+  document.getElementById('btnSim').textContent='● Demo Mode';
+  setStatus('online','DEMO MODE'); countdown=5; genSim();
+  clearInterval(simInterval); clearInterval(simTick);
+  simInterval=setInterval(()=>{genSim();countdown=5;},5000);
+  simTick=setInterval(()=>{
+    countdown=Math.max(0,countdown-1);
+    document.getElementById('tickerFill').style.width=((5-countdown)/5*100)+'%';
+    document.getElementById('tickerText').textContent=countdown+'s';
+  },1000);
+}
+function stopSim(){
+  simulating=false; clearInterval(simInterval); clearInterval(simTick);
+  document.getElementById('btnSim').classList.remove('active');
+  document.getElementById('btnSim').textContent='○ Demo Mode';
+  if(connected)startFetchLoop(); else setStatus('offline','NOT CONNECTED');
+}
+function genSim(){
+  bT+=(Math.random()-0.48)*0.9; bH+=(Math.random()-0.48)*1.5;
+  bT=Math.max(8,Math.min(42,bT)); bH=Math.max(20,Math.min(95,bH));
+  updateUI(bT,bH);
+}
+
+// ══════════════════════════════
+//  STATUS
+// ══════════════════════════════
+function setStatus(s,l){
+  const d=document.getElementById('connDot'); d.className='dot';
+  if(s==='offline')d.classList.add('offline');
+  if(s==='error')  d.classList.add('error');
+  if(s==='loading')d.classList.add('loading');
+  document.getElementById('connLabel').textContent=l;
+}
+
+// ══════════════════════════════
+//  SPARKLINE
+// ══════════════════════════════
+function drawSparkline(){
+  const cv=document.getElementById('sparkline');
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.parentElement.clientWidth-40, H=130;
+  cv.width=W*dpr; cv.height=H*dpr;
+  cv.style.width=W+'px'; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const p={l:30,r:10,t:10,b:20}, iW=W-p.l-p.r, iH=H-p.t-p.b;
+  ctx.strokeStyle='rgba(139,26,26,0.07)'; ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=p.t+(i/4)*iH;
+    ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+iW,y);ctx.stroke();
+  }
+  const draw=(data,color,mn,mx)=>{
+    if(data.length<2)return;
+    const pts=data.map((v,i)=>({x:p.l+(i/(data.length-1))*iW,y:p.t+(1-(v-mn)/(mx-mn))*iH}));
+    const g=ctx.createLinearGradient(0,p.t,0,p.t+iH);
+    g.addColorStop(0,color+'44'); g.addColorStop(1,color+'00');
+    ctx.beginPath(); ctx.moveTo(pts[0].x,p.t+iH);
+    pts.forEach(pt=>ctx.lineTo(pt.x,pt.y));
+    ctx.lineTo(pts[pts.length-1].x,p.t+iH);
+    ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++){const mx2=(pts[i-1].x+pts[i].x)/2;ctx.bezierCurveTo(mx2,pts[i-1].y,mx2,pts[i].y,pts[i].x,pts[i].y);}
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.shadowColor=color; ctx.shadowBlur=5; ctx.stroke(); ctx.shadowBlur=0;
+    const last=pts[pts.length-1];
+    ctx.beginPath();ctx.arc(last.x,last.y,4,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+  };
+  const tMn=Math.floor(Math.min(...(hist.temp.length?hist.temp:[0]),10));
+  const tMx=Math.ceil(Math.max(...(hist.temp.length?hist.temp:[40]),40));
+  ctx.fillStyle='#8a6a4a'; ctx.font='10px "Crimson Pro",serif'; ctx.textAlign='right';
+  ctx.fillText(tMx+'°',p.l-4,p.t+10); ctx.fillText(tMn+'°',p.l-4,p.t+iH);
+  draw(hist.temp,'#8b1a1a',tMn,tMx);
+  draw(hist.humi,'#2a6b5c',0,100);
+}
+
+// ══════════════════════════════
+//  TOAST / RESET
+// ══════════════════════════════
+let tT=null;
+function showToast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),3200);
+}
+function resetHistory(){
+  hist.temp.length=0; hist.humi.length=0; bT=24; bH=58; drawSparkline();
+  document.getElementById('historyCount').textContent='Awaiting readings…';
+  showToast('History cleared');
+}
+
+// ══════════════════════════════
+//  INIT
+// ══════════════════════════════
+window.addEventListener('load',()=>{
+  const sc=localStorage.getItem('ts_channel'), sk=localStorage.getItem('ts_key');
+  if(sc&&sk){
+    document.getElementById('inputChannel').value=sc;
+    document.getElementById('inputKey').value=sk;
+    CHANNEL_ID=sc; READ_KEY=sk;
+    document.getElementById('channelDisplay').textContent='#'+CHANNEL_ID;
+    document.getElementById('configBanner').style.opacity='0.5';
+    startFetchLoop(); showToast('Restored saved connection');
+  }
+  drawSparkline();
+});
+window.addEventListener('resize',drawSparkline);
+</script>
+</body>
+</html>
